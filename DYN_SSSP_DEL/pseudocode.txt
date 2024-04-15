@@ -1,0 +1,38 @@
+running the script 
+
+SSSP_Snap.exe <graphfile> <no.of vertices> <no.of edges> <no.of edges to delete>
+
+This program takes the number of edges as input and deletes that many edges from the graph at random 
+and then updates the SSSP path for all vertices from the source vertex
+
+FUNCTIONS USED
+--------------
+SSSP:
+INPUT  -> graph in CSR format 
+OUTPUT -> an array of shortest path from 0(source)
+
+SSSPNEW:
+INPUT  -> new vertice along with SSSP output array
+OUTPUT -> updates the SSSP array based on new graph
+
+DYNSSSPDEL:
+INPUT  -> edge to delete along with SSSP output array
+OUTPUT -> calls SSSPNEW for updating shortest path
+
+Pseudocode:
+1. Store the input from graph_file in an edge vector(called node).
+2. Call SSSP to create the array of shortest path.
+3. Store the edges to delete in another edge vector(called addedge).
+4. For each edge in addedge call DYNSSSPDEL.
+5. The function first checks if deleting the edge affects the shortest path
+(i.e , whether the edge is part of the BFS tree)
+    if NO then delete the edge and updates the cumulative sum and return.
+6.If YES then delete the edge and change the shortest path to the to vertex of the 
+    edge to INT_MAX.
+7.update the cumulative sum array (since an edge is deleted) and then for all the nodes 
+whose outvertex is the vertex whose shortestpath is changed to INT_MAX update the new 
+shortest path
+8.Now call SSSPNEW on the vertex and for all outgoing edges if the edge is part of the BFS Tree
+(i.e , the deleted edge is part of shortest path) then call SSSPNEW on the deleted edges to-vertex
+9.Repeat for all edges in addedge
+
