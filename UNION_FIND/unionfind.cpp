@@ -46,12 +46,12 @@ class Union{
             int sy = size[y];
             if(px == py) return;
             if(sx < sy){
-                parent[x] = y;
-                size[x] += sy;
+                parent[x] = py;
+                size[y] += sx;
             }
             else{
-                parent[y] = x;
-                size[y] += sx;
+                parent[y] = px;
+                size[x] += sy;
             }
             this->n--;
             return;
@@ -133,9 +133,12 @@ int main(int argc,char** argv){
     // }
     #pragma omp parallel
     {
-        #pragma omp for
+        #pragma omp for ordered
         for(i = 0; i < edge; i++) {
-            concomp.unionbysize(node.at(i).from, node.at(i).to);
+            #pragma omp ordered
+            {
+                concomp.unionbysize(node.at(i).from, node.at(i).to);
+            }
         }
     }
         
