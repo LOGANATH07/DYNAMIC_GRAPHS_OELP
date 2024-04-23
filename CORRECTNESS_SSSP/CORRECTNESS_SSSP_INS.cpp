@@ -43,6 +43,24 @@ void correctness(vector<Edge>& node, vector<int>& sum, vector<int>& ar){
     return ;
 }
 
+void SSSPNEW(vector<int>& ar, vector<int>& sum, vector<Edge>& node, int to){
+    // #pragma omp parallel for
+    for(int i=sum[to];i<sum[to+1];i++){
+        if(ar[node.at(i).from]+node.at(i).edgeweight<ar[node.at(i).to]) {
+            ar[node.at(i).to] = ar[node.at(i).from]+node.at(i).edgeweight;
+            SSSPNEW(ar,sum,node,node.at(i).to);
+        }
+    }
+}
+
+void DYNSSSP(vector<int>& ar, vector<int>& sum, vector<Edge>& node, Edge E){
+    if(ar[E.from]+E.edgeweight<ar[E.to]) {
+        ar[E.to] = ar[E.from]+E.edgeweight;
+        SSSPNEW(ar,sum,node,E.to);
+    }
+    return;
+}
+
 int main(int argc,char** argv){
     srand(0);
     omp_set_num_threads(70);
@@ -82,15 +100,50 @@ int main(int argc,char** argv){
         sum.push_back(count);
     }
     SSSP(node,sum,ar);
-    // cout<<"The shortest distance from the starting node to all other nodes is\n";
-    // for(auto it : ar) {
-    //     if(it==INT_MAX){
-    //         cout<<"max ";
-    //         continue;
-    //     }
-    //     cout<<it<<" ";
-    // }    
-    // cout<<"\n\n";
+    cout<<"The shortest distance from the starting node to all other nodes is\n";
+    for(auto it : ar) {
+        if(it==INT_MAX){
+            cout<<"max ";
+            continue;
+        }
+        cout<<it<<" ";
+    }    
+    cout<<"\n\n";
+    int newedges = stoi(argv[5]);
+    vector<Edge> addedge;
+    fstream inputfile1(argv[4],ios::in);
+    for(int i=0;i<newedges;i++){
+        getline(inputfile1,line);
+        istringstream input(line);
+        input>>E.from>>ws>>E.to;
+        E.edgeweight = rand()%1000+1;
+        addedge.push_back(E);
+        node.push_back(E);
+        for(int i=E.from+1;i<sum.size();i++) sum[i]++;
+    }
+    sort(node.begin(),node.end(),Compare);
+    double itime,ftime,etime;
+    itime = omp_get_wtime();
+    int i=0;
+    #pragma omp parallel private(i) shared(ar,node,sum)
+    {
+        #pragma omp for
+        for(int i=0;i<newedges;i++){
+            DYNSSSP(ar,sum,node,addedge.at(i));
+        }
+    }
+    ftime = omp_get_wtime();
+    etime = ftime-itime;
+    cout<<"Time for one edge change "<<etime<<"s\n";
+    cout<<"The shortest distance from the starting node to all other nodes is\n";
+    for(auto it : ar) {
+        if(it==INT_MAX){
+            cout<<"max ";
+            continue;
+        }
+        cout<<it<<" ";
+    }
+    cout<<"\n\n";
     correctness(node,sum,ar);
 
     return 0;
