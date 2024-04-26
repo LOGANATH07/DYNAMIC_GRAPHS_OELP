@@ -58,7 +58,7 @@ void DYNSSSPDEL(int* ar,vector<int> sum,vector<edge> node,Edge E){
     int oldedge = ar[E.to];
     for(int i=sum[E.from];i<sum[E.from+1];i++){
         if(node.at(i).to==E.to){
-            node.erase(node.begin()+i);
+            node.erase(node.begin()+i-1);
             ar[E.to] = INT_MAX;
             for(int j = E.from+1;j<sum.size();j++){
                 sum[j]--;
@@ -155,7 +155,7 @@ int main(int argc,char** argv){
     }
     ftime = omp_get_wtime();
     etime = ftime-itime;
-    cout<<"Time for one edge change "<<etime<<"s"<<endl;
+    cout<<"Time for one edge change "<<etime/newedges<<"s"<<endl;
     cout<<"The shortest distance from the starting node to all other nodes is\n"<<endl;
     for(auto it : ar) {
         if(it==INT_MAX){
