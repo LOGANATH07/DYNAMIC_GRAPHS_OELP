@@ -57,32 +57,59 @@ class Graph{
     void BFS(){
         double itime,ftime,etime;
         itime = omp_get_wtime();
-        while(1){
+        bool updated = false;
+        while(1){ //relaxation of vertices for vertices-1 times
             updated = false;
-            int fnode,tnode = 0;
-            #pragma omp parallel private(fnode,tnode) shared(Nodes,isum)
-            {   
-                #pragma omp parallel for
-                for(int i=0;i<Edges;i++){
-                    if(bfs[Nodes[i].from]==depth){
-                        fnode = Nodes[i].from;
-                        for(int j=isum[fnode];j<isum[fnode+1];j++){
-                            tnode = Nodes[j].to;
-                            if(bfs[tnode]>depth+1){
-                                bfs[tnode] = depth+1;
-                                updated = true;
-                            }
-                        }
-                    }
+            #pragma omp parallel for
+            for(int i=0;i<Edges;i++){
+                if(bfs[Nodes[i].from]+Nodes[i].edgeweight<bfs[Nodes[i].to]) {
+                    bfs[Nodes[i].to] = bfs[Nodes[i].from]+Nodes[i].edgeweight;
+                    updated = true;
                 }
             }
-            depth++;
-            if(!updated) break; 
+            if(!updated) break;
         }
         ftime = omp_get_wtime();
         etime = ftime-itime;
-        cout<<"Ran for "<<etime<<"s"<<endl;
+        cout<<"Ran for "<<etime<<"s\n";
     }
+
+    // void BFS(){
+    //     double itime,ftime,etime;
+    //     itime = omp_get_wtime();
+    //     // while(1){
+    //     //     updated = false;
+    //         int fnode,tnode = 0;
+    //         queue<int> Q;
+    //         Q.push(0);
+    //             // #pragma omp parallel for
+    //             // for(int i=0;i<Edges;i++){
+    //             //     if(bfs[Nodes[i].from]==depth){
+    //         while(!Q.empty()){
+    //             fnode = Q.front();
+    //             Q.pop();
+    //             // #pragma omp parallel private(fnode,tnode) shared(Nodes,isum)
+    //             // {   
+    //             #pragma omp parallel for
+    //             for(int j=isum[fnode];j<isum[fnode+1];j++){
+    //                 tnode = Nodes[j].to;
+    //                 if(bfs[tnode]>depth+1){
+    //                     Q.push(tnode);
+    //                     bfs[tnode] = depth+1;
+    //                     // updated = true;
+    //                 }
+    //             }
+    //             // }
+    //             depth++;
+    //             //     }
+    //             // }
+    //         }
+    //     //     if(!updated) break; 
+    //     // }
+    //     ftime = omp_get_wtime();
+    //     etime = ftime-itime;
+    //     cout<<"Ran for "<<etime<<"s"<<endl;
+    // }
 
 
 };
@@ -100,16 +127,17 @@ int main(int argc,char** argv){
         getline(inputfile,line);
         istringstream input(line);
         input>>E.from>>ws>>E.to;
-        E.edgeweight = rand()%1000+1;
+        E.edgeweight = 1;
         g.Nodes.push_back(E);
     }
     sort(g.Nodes.begin(),g.Nodes.end(),Compare);
     g.rowcount();
+    // g.BFS();
     g.BFS();
-    // for(auto it:g.bfs) {
-    //     if(it==INT_MAX) cout<<"max"<<" ";
-    //     else cout<<it<<" ";
-    // }
+    for(auto it:g.bfs) {
+        if(it==INT_MAX) cout<<"max"<<" ";
+        else cout<<it<<" ";
+    }
     cout<<"\n";
     return 0;
 }
