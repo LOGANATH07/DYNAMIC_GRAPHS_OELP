@@ -15,18 +15,19 @@ bool Compare(Edge e1, Edge e2){
 class Graph{
 
     bool updated = false;
-    int Edges =0;
     int Vertics=0;
     int depth = 0;
 
     public:
 
+    int Edges =0;
     vector<edge> Nodes;
     vector<int> sssp;
     vector<int> isum;
+    vector<bool> visited;
 
     Graph(int edges,int vertices):
-    sssp(vertices,INT_MAX),isum(vertices+1,0),Nodes(edges)
+    sssp(vertices,INT_MAX),visited(vertices,false),isum(vertices+1,0)
     {
         sssp[0] = 0;
         Edges = edges;
@@ -55,12 +56,9 @@ class Graph{
     }
 
     void SSSP(){
-        double itime,ftime,etime;
-        itime = omp_get_wtime();
         bool updated = false;
         while(1){ //relaxation of vertices for vertices-1 times
             updated = false;
-            #pragma omp parallel for
             for(int i=0;i<Edges;i++){
                 if(sssp[Nodes[i].from]+Nodes[i].edgeweight<sssp[Nodes[i].to]) {
                     sssp[Nodes[i].to] = sssp[Nodes[i].from]+Nodes[i].edgeweight;
@@ -69,72 +67,68 @@ class Graph{
             }
             if(!updated) break;
         }
-        ftime = omp_get_wtime();
-        etime = ftime-itime;
-        cout<<"Ran for "<<etime<<"s\n";
     }
 
     void SSSPDEL(int fnode,int oldedge){
         for(int i=isum[fnode];i<isum[fnode+1];i++){
             if(oldedge+Nodes[i].edgeweight==sssp[Nodes[i].to]){
                 int newedge = sssp[Nodes[i].to];
+                sssp[Nodes[i].to] = INT_MAX;
                 for(int j=0;j<Edges;j++){
                     if( Nodes[j].to == Nodes[i].to && sssp[Nodes[j].from]+Nodes[j].edgeweight<sssp[Nodes[i].to]){
                         sssp[Nodes[i].to] =sssp[Nodes[j].from]+Nodes[j].edgeweight;
-                        SSSPDEL(Nodes[i].to,newedge);
                     }
                 }
+                SSSPDEL(Nodes[i].to,newedge);
             }
         }
     }
 
     void DYNDEL(edge E) {
         int oldedge = sssp[E.to];
+        // cout<<E.from<<" "<<E.to<<" "<<isum[E.from+1]-isum[E.from]<<"\n";
         for(int i=isum[E.from];i<isum[E.from+1];i++){
+            // cout<<Nodes[i].from<<" "<<Nodes[i].to<<" "<<Nodes.size()<<"\n";
             if(Nodes[i].to==E.to){
-                Nodes.erase(Nodes.begin()+i-1);
+                Nodes.erase(Nodes.begin()+i);
                 Edges--;
-                sssp[E.to] = INT_MAX;
-                for(int j = E.from+1;j<isum.size();j++){
-                    isum[j]--;
+                for(int j = E.from;j<isum.size();j++){
+                   isum[j]--;
                 }
                 break;
             }
+            // cout<<Nodes[i].from<<" "<<Nodes[i].to<<" "<<Nodes.size()<<"\n";
         }
         if(sssp[E.from] + E.edgeweight != sssp[E.to]) return;
-        int newfrom = 0;
+        sssp[E.to] = INT_MAX;
         for(int i=0;i<Edges;i++){
             if(Nodes[i].to == E.to){
                 if(sssp[Nodes[i].from]+Nodes[i].edgeweight<sssp[Nodes[i].to]){
                     // if(Nodes[i].to==0) continue;
                     sssp[Nodes[i].to] = sssp[Nodes[i].from]+Nodes[i].edgeweight;
-                    newfrom = Nodes[i].from;
                 }
             }
-        }    
+        }  
         SSSPDEL(E.to,oldedge);
         return;
     }
 
     void DYNGRAPH(int newedge,vector<edge>* newedges){
-        double itime,ftime,etime;
-        itime = omp_get_wtime();
         int i=0;
-        #pragma omp pssspallel private(i) shsssped(iisum,newedges,sssp)
-        {
-            #pragma omp for
+        // #pragma omp parallel private(i) shared(isum,newedges,sssp)
+        // {
+        //     #pragma omp for
             for(int i=0;i<newedge;i++){
                 DYNDEL(newedges->at(i));
             }
+        // }
         }
-        ftime = omp_get_wtime();
-        etime = ftime-itime;
-        cout<<"Time for one edge change "<<etime<<"s\n";
-    }
 
     void correctness(){
         for(int i=0;i<Edges;i++){
             if(sssp[Nodes[i].from]+Nodes[i].edgeweight<sssp[Nodes[i].to]){
+                // cout<<Nodes[i].from<<" "<<Nodes[i].to<<"\n";
+                // cout<<sssp[Nodes[i].from]<<" "<<Nodes[i].edgeweight<<" "<<sssp[Nodes[i].to];
                 cout<<"A shorter path is available"<<endl;
                 return;
             }
@@ -147,7 +141,7 @@ class Graph{
 
 int main(int argc,char** argv){
     srand(0);
-    omp_set_num_threads(16);
+    // omp_set_num_threads(16);
     int vertex=stoi(argv[2]);
     int edge=stoi(argv[3]);
     Graph g(edge,vertex);
@@ -163,19 +157,38 @@ int main(int argc,char** argv){
     }
     sort(g.Nodes.begin(),g.Nodes.end(),Compare);
     g.rowcount();
+    auto start = chrono::high_resolution_clock::now();
+    ios_base::sync_with_stdio(false); 
     g.SSSP();
-    // for(auto it:g.bfs) {
-    //     if(it==INT_MAX) cout<<"max"<<" ";
-    //     else cout<<it<<" ";
-    // }
+    auto end = chrono::high_resolution_clock::now();
+    double time_taken = chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    time_taken *= 1e-9;
+    cout<<"\n";
+    g.correctness();
     int newedges = stoi(argv[4]);
     vector<Edge> addedge;
     for(int i=0;i<newedges;i++){
         Edge random = g.Nodes.at(rand()%vertex);
         addedge.push_back(random);
     }
+    auto start1 = chrono::high_resolution_clock::now();
+    ios_base::sync_with_stdio(false); 
     g.DYNGRAPH(newedges,&addedge);
+    auto end1 = chrono::high_resolution_clock::now();
+    auto time_taken1 = chrono::duration_cast<chrono::nanoseconds>(end1 - start1).count();
+    time_taken1 *= 1e-7;
     cout<<"\n";
+    for(auto it:g.sssp){
+        if(it==INT_MAX) cout<<"max"<<" ";
+        else cout<<it<<" ";
+    }
+    cout<<"\n";
+    cout << "Time taken by SSSP program without OPENMP library is : " << fixed 
+         << time_taken << setprecision(9);
+    cout << " sec" << endl;
+    cout << "Time taken for one edge deletion without OPENMP library is : " << fixed 
+         << time_taken1 << setprecision(7);
+    cout << " sec" << endl;
     g.correctness();
     return 0;
 }
